@@ -104,36 +104,61 @@ const createSoundModuleCode = async (cache: Map<string, FileStats>, options: Vit
   }
 
   function defaultAudioPlayerCreator(url) {
-    const audioContext = new Audio();
-    audioContext.src = url;
-    audioContext.autoplay = false;
-    return audioContext;
+    const audioPlayer = new Audio();
+    audioPlayer.src = url;
+    audioPlayer.autoplay = false;
+    return audioPlayer;
   }
 
-  export function useSound(id, audioPlayerCreator = defaultAudioPlayerCreator) {
+  let playerCreator = defaultAudioPlayerCreator;
+
+  export function setupUseSound(audioPlayerCreator) {
+    playerCreator = audioPlayerCreator;
+  }
+
+  export function useSound(id, audioPlayerCreator = undefined) {
+    audioPlayerCreator = audioPlayerCreator || playerCreator;
+
     const url = soundUrls[id];
-    if (!url) {
+    if (!url && !id 
+      && !(
+           id.startsWith('https://') 
+        || id.startsWith('http://') 
+        || id.startsWith('data:') 
+        || id.startsWith('blob:') 
+        || id.startsWith('file:')
+         )
+      ) {
       throw new Error(\`Sound id \${id} not found\`);
     }
-    const audioContext = audioPlayerCreator(url);
+    const audioPlayer = audioPlayerCreator(url);
     return {
       url: url,
-      player: audioContext,
-      play: () => {
-        if(audioContext.seek){
-          audioContext.seek(0);
-        }else if(audioContext.currentTime){
-          audioContext.currentTime = 0;
-        }
-        audioContext.play()
+      player: audioPlayer,
+      onPlayEnded: (cb) => {
+        audioPlayer.onended = cb;
+        audioPlayer.onEnded && audioPlayer.onEnded(cb);
       },
-      pause: () => audioContext.pause(),
-      stop: () => audioContext.pause(),
+      play: (src = undefined) => {
+        if(src){
+          audioPlayer.src = src;
+        }
+        if(audioPlayer.seek){
+          audioPlayer.seek(0);
+        }else if(audioPlayer.currentTime){
+          audioPlayer.currentTime = 0;
+        }
+        audioPlayer.play();
+      },
+      pause: () => audioPlayer.pause && audioPlayer.pause(),
       destroy: () => {
-        audioContext.pause();
-        audioContext.src = null;
-        if(audioContext.destroy){
-          audioContext.destroy();
+        audioPlayer.pause();
+        audioPlayer.src = null;
+        if(audioPlayer.destroy){
+          audioPlayer.destroy();
+        }
+        if(audioPlayer.close){
+          audioPlayer.close();
         }
       },
     }
@@ -178,7 +203,7 @@ export async function compilerSounds(cache: Map<string, FileStats>, options: Vit
 }
 
 const compileSound = (dir: string, filePath: string, mtimeMs: number | undefined, options: ViteUseSoundPlugin): FileStats => {
-  const relativeName = normalizePath(filePath).substring(normalizePath(dir).length);
+  const relativeName = normalizePath(filePath).substring(normalizePath(dir).length + 1);
 
   return {
     relativeName: relativeName,
@@ -198,5 +223,31 @@ const createSymbolId = (relativeName: string, symbolIdPattern?: string): string 
   if (!symbolIdPattern) {
     return relativeName;
   }
-  return symbolIdPattern.replace('[dir]', path.dirname(relativeName)).replace('[name]', path.basename(relativeName, path.extname(relativeName)));
+
+  let id = symbolIdPattern;
+  let fName = relativeName;
+
+  const { fileName = '', dirName } = discreteDir(relativeName);
+  if (symbolIdPattern.includes('[dir]')) {
+    id = id.replace(/\[dir\]/g, dirName);
+    if (!dirName) {
+      id = id.replace('--', '-');
+    }
+    fName = fileName;
+  }
+  id = id.replace(/\[name\]/g, fName);
+  return id.replace(path.extname(id), '');
 };
+
+export function discreteDir(name: string) {
+  if (!normalizePath(name).includes('/')) {
+    return {
+      fileName: name,
+      dirName: '',
+    };
+  }
+  const strList = name.split('/');
+  const fileName = strList.pop();
+  const dirName = strList.join('-');
+  return { fileName, dirName };
+}
