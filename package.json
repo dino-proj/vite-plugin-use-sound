@@ -1,6 +1,6 @@
 {
   "name": "@dino-dev/vite-plugin-use-sound",
-  "version": "0.9.8",
+  "version": "0.9.9",
   "description": "A vite plugin for playing sound effects",
   "publishConfig": {
     "access": "public"
@@ -20,7 +20,10 @@
   "files": [
     "dist",
     "src",
-    "client.d.ts"
+    "client.d.ts",
+    "README.md",
+    "README.zh_CN.md",
+    "LICENSE"
   ],
   "keywords": [
     "vite",
