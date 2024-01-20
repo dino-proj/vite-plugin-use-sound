@@ -17,6 +17,11 @@
   },
   "license": "MIT",
   "author": "Cody Lu",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dino-proj/vite-plugin-use-sound.git"
+  },
+  "homepage": "https://github.com/dino-proj/vite-plugin-use-sound",
   "files": [
     "dist",
     "src",
