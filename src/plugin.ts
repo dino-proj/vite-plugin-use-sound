@@ -120,18 +120,18 @@ const createSoundModuleCode = async (cache: Map<string, FileStats>, options: Vit
     audioPlayerCreator = audioPlayerCreator || playerCreator;
 
     const url = soundUrls[id];
-    if (!url && !id 
-      && !(
-           id.startsWith('https://') 
+    if (!url && id) {
+      if(id.startsWith('https://') 
         || id.startsWith('http://') 
         || id.startsWith('data:') 
         || id.startsWith('blob:') 
-        || id.startsWith('file:')
-         )
-      ) {
-      throw new Error(\`Sound id \${id} not found\`);
+        || id.startsWith('file:')){
+          url = id
+      } else {
+        throw new Error(\`Sound id \${id} not found\`);
+      }
     }
-    const audioPlayer = audioPlayerCreator(url);
+    const audioPlayer = audioPlayerCreator(url || '');
     return {
       url: url,
       player: audioPlayer,
